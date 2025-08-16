@@ -35,11 +35,11 @@ export class ElectionPredictionModel {
     
     // Train Random Forest
     this.rfModel = new RandomForestClassifier({
-      nEstimators: 100,
-      maxDepth: 10,
-      minSamplesLeaf: 2,
-      seed: 42
-    });
+  nEstimators: 100,
+  maxFeatures: 0.8,
+  replacement: false,
+  seed: 42
+});
     
     this.rfModel.train(normalizedFeatures, labels);
     this.isTrained = true;
