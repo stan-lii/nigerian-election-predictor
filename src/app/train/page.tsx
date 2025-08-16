@@ -102,7 +102,9 @@ export default function TrainPage() {
         setResult(null); // Clear previous results
         
       } catch (error) {
-        alert(`Invalid data file: ${error.message}`);
+        // Fix: Properly handle the unknown error type
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        alert(`Invalid data file: ${errorMessage}`);
         setUploadedData(null);
       }
     };
@@ -130,7 +132,9 @@ export default function TrainPage() {
       setResult(result);
     } catch (error) {
       console.error('Training failed:', error);
-      setResult({ error: `Training failed: ${error.message}` });
+      // Fix: Properly handle the unknown error type
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setResult({ error: `Training failed: ${errorMessage}` });
     } finally {
       setIsTraining(false);
     }
@@ -150,6 +154,15 @@ export default function TrainPage() {
 
   return (
     <main className="container mx-auto px-4 py-8">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Train Election Model
+        </h1>
+        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          Upload your own election data or use sample data to train the machine learning model
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upload Section */}
         <Card>
@@ -178,7 +191,7 @@ export default function TrainPage() {
                 <h4 className="font-semibold text-green-800">✅ Data Loaded Successfully</h4>
                 <div className="text-sm text-green-700 mt-2">
                   <p><strong>Training Examples:</strong> {uploadedData.inputs?.length || 0}</p>
-                  <p><strong>States Covered:</strong> {Array.from(new Set(uploadedData.inputs?.map(i => i.state))).length}</p>
+                  <p><strong>States Covered:</strong> {Array.from(new Set(uploadedData.inputs?.map((i: any) => i.state))).length}</p>
                   <p><strong>Parties:</strong> {Array.from(new Set(uploadedData.outputs)).join(', ')}</p>
                 </div>
               </div>
