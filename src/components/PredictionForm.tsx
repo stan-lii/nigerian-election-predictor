@@ -1,67 +1,66 @@
-// src/components/PredictionForm.tsx - IMPROVED VERSION
+// src/components/PredictionForm.tsx - FIXED VERSION
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { PredictionInput, PredictionResult } from '@/types/election';
+import { PredictionInput, PredictionResult, PartyType } from '@/types/election';
+
+const initialFormData: PredictionInput = {
+  state: '',
+  demographic: {
+    state: '',
+    population: 5000000,
+    youth_ratio: 0.5,
+    education_index: 0.6,
+    urban_ratio: 0.4,
+    literacy_rate: 0.7,
+    christian_percentage: 50,
+    muslim_percentage: 50,
+    home_ownership_rate: 0.6
+  },
+  economic: {
+    state: '',
+    year: 2023,
+    gdp_growth: 3.0,
+    unemployment_rate: 15,
+    inflation_rate: 18,
+    poverty_rate: 35,
+    oil_production: 0
+  },
+  security: {
+    state: '',
+    year: 2023,
+    security_incidents: 10,
+    violence_index: 0.3,
+    boko_haram_activity: false,
+    communal_conflicts: 2
+  },
+  incumbent_party: 'APC',
+  campaign_spending_ratio: 1.0
+};
 
 export default function PredictionForm() {
-  const [formData, setFormData] = useState<PredictionInput>({
-    state: '',
-    demographic: {
-      state: '',
-      population: 0,
-      youth_ratio: 0.4,
-      education_index: 0.5,
-      urban_ratio: 0.3,
-      literacy_rate: 0.6,
-      christian_percentage: 50,
-      muslim_percentage: 50,
-      home_ownership_rate: 0.4
-    },
-    economic: {
-      state: '',
-      year: 2024,
-      gdp_growth: 2.5,
-      unemployment_rate: 15,
-      inflation_rate: 18,
-      poverty_rate: 40
-    },
-    security: {
-      state: '',
-      year: 2024,
-      security_incidents: 10,
-      violence_index: 0.3,
-      boko_haram_activity: false,
-      communal_conflicts: 2
-    },
-    incumbent_party: '',
-    campaign_spending_ratio: 1.0
-  });
-  
+  const [formData, setFormData] = useState<PredictionInput>(initialFormData);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
 
   const nigerianStates = [
-    'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue',
-    'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu',
-    'FCT', 'Gombe', 'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi',
-    'Kogi', 'Kwara', 'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
-    'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
+    'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+    'Cross River', 'Delta', 'Ebonyi', 'Edo', 'Ekiti', 'Enugu', 'FCT', 'Gombe',
+    'Imo', 'Jigawa', 'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara',
+    'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo', 'Plateau',
+    'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
   ];
 
   const validateForm = () => {
-    if (!formData.state.trim()) {
+    if (!formData.state) {
       return 'Please select a state';
-    }
-    if (!formData.incumbent_party) {
-      return 'Please select an incumbent party';
     }
     if (formData.demographic.christian_percentage + formData.demographic.muslim_percentage !== 100) {
       return 'Christian and Muslim percentages must add up to 100%';
@@ -112,8 +111,8 @@ export default function PredictionForm() {
         throw new Error('Invalid prediction result received');
       }
 
-      // Ensure all required parties are present
-      const requiredParties = ['APC', 'PDP', 'LP', 'Other'];
+      // Ensure all required parties are present with proper typing
+      const requiredParties: PartyType[] = ['APC', 'PDP', 'LP', 'Other'];
       for (const party of requiredParties) {
         if (typeof result.vote_shares[party] !== 'number') {
           console.warn(`Missing or invalid vote share for ${party}`);
@@ -125,122 +124,154 @@ export default function PredictionForm() {
       setPrediction(result);
     } catch (error) {
       console.error('Prediction error:', error);
-      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+      setError(error instanceof Error ? error.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Election Prediction Parameters</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded text-red-800">
-                <h4 className="font-semibold">❌ Error</h4>
-                <p className="mt-1">{error}</p>
-              </div>
-            )}
-
             {/* State Selection */}
             <div>
               <Label htmlFor="state">State *</Label>
-              <div className="space-y-2">
-                <Select
-                  value={formData.state}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="max-h-[300px] overflow-y-auto">
-                      {nigerianStates.map(state => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
-                      ))}
-                    </div>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">
-                  Alternative: Type state name in the field below
-                </p>
-                <Input
-                  placeholder="Or type state name here..."
-                  value={formData.state}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                  list="states-list"
-                />
-                <datalist id="states-list">
+              <Select
+                value={formData.state}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent>
                   {nigerianStates.map(state => (
-                    <option key={state} value={state} />
+                    <SelectItem key={state} value={state}>{state}</SelectItem>
                   ))}
-                </datalist>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Demographic Factors */}
+            {/* Demographics */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Demographics</h3>
               
-              <div>
-                <Label>Youth Ratio (18-35): {(formData.demographic.youth_ratio * 100).toFixed(0)}%</Label>
-                <Slider
-                  value={[formData.demographic.youth_ratio]}
-                  onValueChange={([value]) => 
-                    setFormData(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, youth_ratio: value }
-                    }))
-                  }
-                  max={1}
-                  step={0.01}
-                  className="mt-2"
-                />
-              </div>
-
-              <div>
-                <Label>Education Index: {(formData.demographic.education_index * 100).toFixed(0)}%</Label>
-                <Slider
-                  value={[formData.demographic.education_index]}
-                  onValueChange={([value]) => 
-                    setFormData(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, education_index: value }
-                    }))
-                  }
-                  max={1}
-                  step={0.01}
-                  className="mt-2"
-                />
-              </div>
-
-              <div>
-                <Label>Urban Population: {(formData.demographic.urban_ratio * 100).toFixed(0)}%</Label>
-                <Slider
-                  value={[formData.demographic.urban_ratio]}
-                  onValueChange={([value]) => 
-                    setFormData(prev => ({
-                      ...prev,
-                      demographic: { ...prev.demographic, urban_ratio: value }
-                    }))
-                  }
-                  max={1}
-                  step={0.01}
-                  className="mt-2"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="christian">Christian %</Label>
+                  <Label>Population</Label>
                   <Input
-                    id="christian"
                     type="number"
+                    value={formData.demographic.population}
+                    onChange={(e) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, population: Number(e.target.value) }
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <Label>Youth Ratio: {(formData.demographic.youth_ratio * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.demographic.youth_ratio]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, youth_ratio: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>Education Index: {(formData.demographic.education_index * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.demographic.education_index]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, education_index: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>Urban Ratio: {(formData.demographic.urban_ratio * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.demographic.urban_ratio]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, urban_ratio: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>Literacy Rate: {(formData.demographic.literacy_rate * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.demographic.literacy_rate]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, literacy_rate: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>Home Ownership Rate: {(formData.demographic.home_ownership_rate * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.demographic.home_ownership_rate]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        demographic: { ...prev.demographic, home_ownership_rate: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label>Christian %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
                     value={formData.demographic.christian_percentage}
                     onChange={(e) => {
                       const value = Number(e.target.value);
@@ -249,19 +280,19 @@ export default function PredictionForm() {
                         demographic: { 
                           ...prev.demographic, 
                           christian_percentage: value,
-                          muslim_percentage: Math.max(0, 100 - value)
+                          muslim_percentage: 100 - value
                         }
                       }));
                     }}
-                    min={0}
-                    max={100}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="muslim">Muslim %</Label>
+                  <Label>Muslim %</Label>
                   <Input
-                    id="muslim"
                     type="number"
+                    min={0}
+                    max={100}
                     value={formData.demographic.muslim_percentage}
                     onChange={(e) => {
                       const value = Number(e.target.value);
@@ -270,27 +301,25 @@ export default function PredictionForm() {
                         demographic: { 
                           ...prev.demographic, 
                           muslim_percentage: value,
-                          christian_percentage: Math.max(0, 100 - value)
+                          christian_percentage: 100 - value
                         }
                       }));
                     }}
-                    min={0}
-                    max={100}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Economic Factors */}
+            {/* Economic Indicators */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Economic Indicators</h3>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="gdp">GDP Growth %</Label>
+                  <Label>GDP Growth (%)</Label>
                   <Input
-                    id="gdp"
                     type="number"
+                    step="0.1"
                     value={formData.economic.gdp_growth}
                     onChange={(e) => 
                       setFormData(prev => ({
@@ -298,14 +327,14 @@ export default function PredictionForm() {
                         economic: { ...prev.economic, gdp_growth: Number(e.target.value) }
                       }))
                     }
-                    step={0.1}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="unemployment">Unemployment %</Label>
+                  <Label>Unemployment Rate (%)</Label>
                   <Input
-                    id="unemployment"
                     type="number"
+                    step="0.1"
                     value={formData.economic.unemployment_rate}
                     onChange={(e) => 
                       setFormData(prev => ({
@@ -315,14 +344,12 @@ export default function PredictionForm() {
                     }
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="inflation">Inflation %</Label>
+                  <Label>Inflation Rate (%)</Label>
                   <Input
-                    id="inflation"
                     type="number"
+                    step="0.1"
                     value={formData.economic.inflation_rate}
                     onChange={(e) => 
                       setFormData(prev => ({
@@ -332,11 +359,12 @@ export default function PredictionForm() {
                     }
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="poverty">Poverty Rate %</Label>
+                  <Label>Poverty Rate (%)</Label>
                   <Input
-                    id="poverty"
                     type="number"
+                    step="0.1"
                     value={formData.economic.poverty_rate}
                     onChange={(e) => 
                       setFormData(prev => ({
@@ -346,34 +374,31 @@ export default function PredictionForm() {
                     }
                   />
                 </div>
+
+                <div>
+                  <Label>Oil Production (barrels/day)</Label>
+                  <Input
+                    type="number"
+                    value={formData.economic.oil_production || 0}
+                    onChange={(e) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        economic: { ...prev.economic, oil_production: Number(e.target.value) }
+                      }))
+                    }
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Security Factors */}
+            {/* Security Indicators */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Security Situation</h3>
+              <h3 className="text-lg font-semibold">Security Indicators</h3>
               
-              <div>
-                <Label>Violence Index: {(formData.security.violence_index * 100).toFixed(0)}%</Label>
-                <Slider
-                  value={[formData.security.violence_index]}
-                  onValueChange={([value]) => 
-                    setFormData(prev => ({
-                      ...prev,
-                      security: { ...prev.security, violence_index: value }
-                    }))
-                  }
-                  max={1}
-                  step={0.01}
-                  className="mt-2"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="incidents">Security Incidents</Label>
+                  <Label>Security Incidents (per month)</Label>
                   <Input
-                    id="incidents"
                     type="number"
                     value={formData.security.security_incidents}
                     onChange={(e) => 
@@ -384,10 +409,48 @@ export default function PredictionForm() {
                     }
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="conflicts">Communal Conflicts</Label>
+                  <Label>Violence Index: {formData.security.violence_index.toFixed(2)}</Label>
+                  <Slider
+                    value={[formData.security.violence_index]}
+                    onValueChange={([value]) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        security: { ...prev.security, violence_index: value }
+                      }))
+                    }
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    className="mt-2"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="boko-haram">Boko Haram Activity</Label>
+                  <Select
+                    value={formData.security.boko_haram_activity.toString()}
+                    onValueChange={(value) => 
+                      setFormData(prev => ({
+                        ...prev,
+                        security: { ...prev.security, boko_haram_activity: value === 'true' }
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="false">No</SelectItem>
+                      <SelectItem value="true">Yes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Communal Conflicts (per year)</Label>
                   <Input
-                    id="conflicts"
                     type="number"
                     value={formData.security.communal_conflicts}
                     onChange={(e) => 
@@ -469,7 +532,7 @@ export default function PredictionForm() {
 
               <div className="space-y-2">
                 <h4 className="font-semibold">Vote Share Predictions:</h4>
-                {Object.entries(prediction.vote_shares || {}).map(([party, share]) => (
+                {(Object.entries(prediction.vote_shares) as [PartyType, number][]).map(([party, share]) => (
                   <div key={party} className="flex justify-between items-center">
                     <span className="font-medium">{party}</span>
                     <div className="flex items-center space-x-2">
