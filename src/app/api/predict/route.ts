@@ -1,4 +1,4 @@
-// src/app/api/predict/route.ts - FIXED VERSION
+// src/app/api/predict/route.ts - SIMPLE TYPESCRIPT-SAFE VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { electionModel } from '@/lib/ml/model';
 import { PredictionInput } from '@/types/election';
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       console.error('Invalid prediction result:', prediction);
       
       // Return a safe fallback prediction
-      const fallbackPrediction = {
+      return NextResponse.json({
         predicted_winner: 'APC',
         confidence: 0.45,
         vote_shares: {
@@ -57,52 +57,68 @@ export async function POST(request: NextRequest) {
           min: 0.35,
           max: 0.55
         }
-      };
-      
-      return NextResponse.json(fallbackPrediction);
+      });
     }
     
-    // Validate vote_shares structure
-    const requiredParties = ['APC', 'PDP', 'LP', 'Other'];
-    const hasAllParties = requiredParties.every(party => 
-      typeof prediction.vote_shares[party] === 'number'
-    );
+    // Simple validation - check that essential properties exist
+    const voteShares = prediction.vote_shares;
+    if (!voteShares.APC && !voteShares.PDP && !voteShares.LP && !voteShares.Other) {
+      console.error('Missing vote shares in prediction:', voteShares);
+      
+      // Return fallback with corrected vote shares
+      return NextResponse.json({
+        predicted_winner: prediction.predicted_winner || 'APC',
+        confidence: prediction.confidence || 0.45,
+        vote_shares: {
+          APC: 0.45,
+          PDP: 0.35,
+          LP: 0.15,
+          Other: 0.05
+        },
+        turnout_prediction: prediction.turnout_prediction || 0.35,
+        uncertainty_range: prediction.uncertainty_range || {
+          min: 0.35,
+          max: 0.55
+        }
+      });
+    }
     
-    if (!hasAllParties) {
-      console.error('Missing parties in vote_shares:', prediction.vote_shares);
-      
-      // Fix vote_shares if incomplete
-      const fixedVoteShares = {
-        APC: prediction.vote_shares.APC || 0,
-        PDP: prediction.vote_shares.PDP || 0,
-        LP: prediction.vote_shares.LP || 0,
-        Other: prediction.vote_shares.Other || 0
-      };
-      
-      // Normalize to sum to 1
-      const total = Object.values(fixedVoteShares).reduce((a, b) => a + b, 0);
-      if (total > 0) {
-        Object.keys(fixedVoteShares).forEach(party => {
-          fixedVoteShares[party] = fixedVoteShares[party] / total;
-        });
-      } else {
-        fixedVoteShares.APC = 0.4;
-        fixedVoteShares.PDP = 0.3;
-        fixedVoteShares.LP = 0.2;
-        fixedVoteShares.Other = 0.1;
+    // Ensure all vote shares are numbers and fix any undefined values
+    const safeVoteShares = {
+      APC: typeof voteShares.APC === 'number' ? voteShares.APC : 0,
+      PDP: typeof voteShares.PDP === 'number' ? voteShares.PDP : 0,
+      LP: typeof voteShares.LP === 'number' ? voteShares.LP : 0,
+      Other: typeof voteShares.Other === 'number' ? voteShares.Other : 0
+    };
+    
+    // Normalize to sum to 1 if needed
+    const total = safeVoteShares.APC + safeVoteShares.PDP + safeVoteShares.LP + safeVoteShares.Other;
+    if (total > 0 && Math.abs(total - 1) > 0.01) {
+      safeVoteShares.APC = safeVoteShares.APC / total;
+      safeVoteShares.PDP = safeVoteShares.PDP / total;
+      safeVoteShares.LP = safeVoteShares.LP / total;
+      safeVoteShares.Other = safeVoteShares.Other / total;
+    }
+    
+    const finalPrediction = {
+      predicted_winner: prediction.predicted_winner || 'APC',
+      confidence: typeof prediction.confidence === 'number' ? prediction.confidence : 0.45,
+      vote_shares: safeVoteShares,
+      turnout_prediction: typeof prediction.turnout_prediction === 'number' ? prediction.turnout_prediction : 0.35,
+      uncertainty_range: prediction.uncertainty_range || {
+        min: 0.35,
+        max: 0.55
       }
-      
-      prediction.vote_shares = fixedVoteShares;
-    }
+    };
     
-    console.log('Prediction successful:', prediction.predicted_winner);
+    console.log('Prediction successful:', finalPrediction.predicted_winner);
     
-    return NextResponse.json(prediction);
+    return NextResponse.json(finalPrediction);
   } catch (error) {
     console.error('Prediction API error:', error);
     
     // Return a comprehensive fallback prediction
-    const fallbackPrediction = {
+    return NextResponse.json({
       predicted_winner: 'APC',
       confidence: 0.45,
       vote_shares: {
@@ -116,8 +132,6 @@ export async function POST(request: NextRequest) {
         min: 0.35,
         max: 0.55
       }
-    };
-    
-    return NextResponse.json(fallbackPrediction);
+    });
   }
 }
