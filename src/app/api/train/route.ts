@@ -1,7 +1,7 @@
 // src/app/api/train/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { electionModel } from '@/lib/ml/model';
-import { PredictionInput } from '@/types/election';
+import { PredictionInput, EconomicData, SecurityData } from '@/types/election';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,22 +28,29 @@ export async function POST(request: NextRequest) {
       // Check if economic/security are arrays (old format) and transform them
       if (Array.isArray(input.economic)) {
         console.log(`Transforming economic data for ${input.state}`);
-        // Get the most recent data (2023 or first item)
-        const recentEconomic = input.economic.find(e => e.year === 2023) || input.economic[0];
+        // Get the most recent data (2023 or first item) with explicit typing
+        const recentEconomic = input.economic.find((e: EconomicData) => e.year === 2023) || input.economic[0];
         inputs[i].economic = recentEconomic;
       }
 
       if (Array.isArray(input.security)) {
         console.log(`Transforming security data for ${input.state}`);
-        // Get the most recent data (2023 or first item)
-        const recentSecurity = input.security.find(s => s.year === 2023) || input.security[0];
+        // Get the most recent data (2023 or first item) with explicit typing
+        const recentSecurity = input.security.find((s: SecurityData) => s.year === 2023) || input.security[0];
         inputs[i].security = recentSecurity;
       }
 
       // Validate required fields exist after transformation
-      if (!inputs[i].economic.unemployment_rate || !inputs[i].security.violence_index) {
+      if (!inputs[i].economic.unemployment_rate && inputs[i].economic.unemployment_rate !== 0) {
         return NextResponse.json(
-          { error: `Input ${i} has invalid economic or security data structure` },
+          { error: `Input ${i} has invalid economic data structure - missing unemployment_rate` },
+          { status: 400 }
+        );
+      }
+
+      if (!inputs[i].security.violence_index && inputs[i].security.violence_index !== 0) {
+        return NextResponse.json(
+          { error: `Input ${i} has invalid security data structure - missing violence_index` },
           { status: 400 }
         );
       }
@@ -65,7 +72,7 @@ export async function POST(request: NextRequest) {
       metrics,
       trainingData: {
         examples: inputs.length,
-        states: Array.from(new Set(inputs.map(i => i.state))).length,
+        states: Array.from(new Set(inputs.map((i: PredictionInput) => i.state))).length,
         parties: Array.from(new Set(outputs))
       }
     });
