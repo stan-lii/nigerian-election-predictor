@@ -1,3 +1,4 @@
+// src/app/api/train/route.ts - FIXED VERSION
 import { NextRequest, NextResponse } from 'next/server';
 import { electionModel } from '@/lib/ml/model';
 import { PredictionInput } from '@/types/election';
@@ -12,6 +13,43 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Validate that inputs are properly structured
+    for (let i = 0; i < inputs.length; i++) {
+      const input = inputs[i];
+      
+      if (!input.state || !input.demographic || !input.economic || !input.security) {
+        return NextResponse.json(
+          { error: `Input ${i} is missing required fields (state, demographic, economic, security)` },
+          { status: 400 }
+        );
+      }
+
+      // Check if economic/security are arrays (old format) and transform them
+      if (Array.isArray(input.economic)) {
+        console.log(`Transforming economic data for ${input.state}`);
+        // Get the most recent data (2023 or first item)
+        const recentEconomic = input.economic.find(e => e.year === 2023) || input.economic[0];
+        inputs[i].economic = recentEconomic;
+      }
+
+      if (Array.isArray(input.security)) {
+        console.log(`Transforming security data for ${input.state}`);
+        // Get the most recent data (2023 or first item)
+        const recentSecurity = input.security.find(s => s.year === 2023) || input.security[0];
+        inputs[i].security = recentSecurity;
+      }
+
+      // Validate required fields exist after transformation
+      if (!inputs[i].economic.unemployment_rate || !inputs[i].security.violence_index) {
+        return NextResponse.json(
+          { error: `Input ${i} has invalid economic or security data structure` },
+          { status: 400 }
+        );
+      }
+    }
+
+    console.log(`Training with ${inputs.length} examples`);
     
     let metrics;
     if (modelType === 'tensorflow') {
@@ -20,14 +58,24 @@ export async function POST(request: NextRequest) {
       metrics = await electionModel.trainRandomForest({ inputs, outputs });
     }
     
+    console.log('Training completed successfully');
+    
     return NextResponse.json({
       message: 'Model trained successfully',
-      metrics
+      metrics,
+      trainingData: {
+        examples: inputs.length,
+        states: Array.from(new Set(inputs.map(i => i.state))).length,
+        parties: Array.from(new Set(outputs))
+      }
     });
   } catch (error) {
     console.error('Training API error:', error);
     return NextResponse.json(
-      { error: 'Failed to train model' },
+      { 
+        error: 'Failed to train model',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
