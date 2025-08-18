@@ -1,3 +1,4 @@
+// src/types/election.ts - UPDATED WITH BETTER TYPE SAFETY
 export interface ElectionData {
   state: string;
   geopolitical_zone: 'NW' | 'NE' | 'NC' | 'SW' | 'SE' | 'SS';
@@ -51,15 +52,21 @@ export interface PredictionInput {
   campaign_spending_ratio: number;
 }
 
+// Define valid party types
+export type PartyType = 'APC' | 'PDP' | 'LP' | 'Other';
+
+// More type-safe vote shares interface
+export interface VoteShares {
+  APC: number;
+  PDP: number;
+  LP: number;
+  Other: number;
+}
+
 export interface PredictionResult {
   predicted_winner: string;
   confidence: number;
-  vote_shares: {
-    APC: number;
-    PDP: number;
-    LP: number;
-    Other: number;
-  };
+  vote_shares: VoteShares;
   turnout_prediction: number;
   uncertainty_range: {
     min: number;
@@ -74,4 +81,17 @@ export interface ModelMetrics {
   f1_score: Record<string, number>;
   confusion_matrix: number[][];
   feature_importance: Record<string, number>;
+}
+
+// Helper type for API responses
+export interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Training data structure
+export interface TrainingData {
+  inputs: PredictionInput[];
+  outputs: string[];
 }
